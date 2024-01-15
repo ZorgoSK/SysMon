@@ -84,11 +84,6 @@ class CPUPlotWindow(Gtk.Window):
     def set_tray_icon(self, tray_icon):
         self.tray_icon = tray_icon
 
-    def on_refresh_changed(self, combo):
-        GLib.source_remove(self.timeout)
-        selected_refresh_interval = int(self.combo_refresh.get_active_text().split()[0])
-        self.timeout = GLib.timeout_add_seconds(selected_refresh_interval, self.update_plot)
-
     def get_canvas(self):
         canvas = FigureCanvas(self.fig)
         self.ly = self.fig.axes[0].axvline(color='red', alpha=0.4)
@@ -159,8 +154,11 @@ class CPUPlotWindow(Gtk.Window):
                 self.batt_level_values.append(bat_level)
                 self.batt_charging_values.append(bat_charger)
 
-                selected_duration = int(self.duration)
-                xlim_start = max(current_time - timedelta(minutes=selected_duration), self.time_values[0])
+                selected_duration = float(self.duration)
+                if selected_duration > 1:
+                    xlim_start = max(current_time - timedelta(minutes=selected_duration), self.time_values[0])
+                else:
+                    xlim_start = max(current_time - timedelta(seconds=(selected_duration * 60)), self.time_values[0])
 
                 self.fig.axes[0].set_xlim(xlim_start, current_time)
 
@@ -200,9 +198,12 @@ class TrayIcon:
         duration_menu.set_submenu(duration_submenu)
         self.menu.append(duration_menu)
 
-        durations = [1, 5, 10, 30, 60, 300, 600, 1440, 1000000]
+        durations = [0.5, 1, 5, 10, 30, 60, 300, 600, 1440, 1000000]
         for duration in durations:
-            duration_item = Gtk.CheckMenuItem(label=f"{duration} minutes")
+            if duration > 1:
+                duration_item = Gtk.CheckMenuItem(label=f"{duration} minutes")
+            else:
+                duration_item = Gtk.CheckMenuItem(label=f"{duration} minute")
             duration_item.set_name(str(duration))
             if duration == self.window.duration:
                 duration_item.set_active(1)
@@ -215,12 +216,16 @@ class TrayIcon:
         refresh_menu.set_submenu(refresh_submenu)
         self.menu.append(refresh_menu)
 
-        refresh_intervals = [1, 2, 3, 4, 5, 10, 60]
+        refresh_intervals = [0.1, 0.5, 1, 2, 3, 4, 5, 10, 60]
         for refresh_interval in refresh_intervals:
-            refresh_item = Gtk.CheckMenuItem(label=f"{refresh_interval} seconds")
+            if refresh_interval > 1:
+                refresh_item = Gtk.CheckMenuItem(label=f"{refresh_interval} seconds")
+            else:
+                refresh_item = Gtk.CheckMenuItem(label=f"{refresh_interval} second")
+
             refresh_item.set_name(str(refresh_interval))
             if refresh_interval == self.window.refresh_interval:
-                refresh_item.set_active(1)
+                refresh_item.set_active(3)
             refresh_item.connect("toggled", self.on_refresh_toggled, refresh_interval)
             refresh_submenu.append(refresh_item)
 
@@ -240,7 +245,7 @@ class TrayIcon:
             self.window.refresh_interval = refresh_interval
             self.uncheck_other_items(widget.get_parent(), refresh_interval)
             GLib.source_remove(self.window.timeout)
-            self.window.timeout = GLib.timeout_add_seconds(refresh_interval, self.window.update_plot)
+            self.window.timeout = GLib.timeout_add(refresh_interval * 1000, self.window.update_plot)
 
     def uncheck_other_items(self, parent_menu, current_value):
         for child in parent_menu.get_children():
