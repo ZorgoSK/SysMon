@@ -1,5 +1,3 @@
-zorgoSysMon
-
 ![alt text](https://github.com/ZorgoSK/SysMon/blob/main/zorgoSysMon_2.png?raw=true)
 
 Hey guys!
