@@ -14,13 +14,14 @@ from PIL import Image
 import os
 
 class CPUPlotWindow(Gtk.Window):
-    def __init__(self, tray_icon=None, refresh_interval=2, duration=30):
+    def __init__(self, tray_icon=None, refresh_interval=2, duration=30, maxarraysize=10000):
         super(CPUPlotWindow, self).__init__(title="zorgoSysMon")
         self.set_default_size(1300, 500)
         self.set_position(Gtk.WindowPosition.CENTER)  # Set window position to center
 
         self.refresh_interval = refresh_interval
         self.duration = duration
+        self.maxarraysize = maxarraysize
 
         self.time_values = []
         self.temperature_values = []
@@ -138,13 +139,14 @@ class CPUPlotWindow(Gtk.Window):
             else:
                 bat_charger_status = 'discharging'
 
-            if len(self.time_values) > 10000:
-                self.time_values.pop(1)
-                self.temperature_values.pop(1)
-                self.cpu_load_values.pop(1)
-                self.cpu_process_load_values.pop(1)
-                self.batt_level_values.pop(1)
-                self.batt_charging_values.pop(1)
+            if self.maxarraysize != 0:
+                if len(self.time_values) > self.maxarraysize:
+                    self.time_values.pop(1)
+                    self.temperature_values.pop(1)
+                    self.cpu_load_values.pop(1)
+                    self.cpu_process_load_values.pop(1)
+                    self.batt_level_values.pop(1)
+                    self.batt_charging_values.pop(1)
 
             if temperature is not None:
                 self.time_values.append(current_time)
@@ -198,12 +200,17 @@ class TrayIcon:
         duration_menu.set_submenu(duration_submenu)
         self.menu.append(duration_menu)
 
-        durations = [0.5, 1, 5, 10, 30, 60, 300, 600, 1440, 1000000]
+        durations = [0.5, 1, 5, 10, 30, 60, 300, 600, 1440, 525600]
         for duration in durations:
-            if duration > 1:
-                duration_item = Gtk.CheckMenuItem(label=f"{duration} minutes")
-            else:
+            if duration <= 1:
                 duration_item = Gtk.CheckMenuItem(label=f"{duration} minute")
+            elif duration > 1 and duration < 60:
+                duration_item = Gtk.CheckMenuItem(label=f"{duration} minutes")
+            elif duration >= 60 and duration <= 1440:
+                duration_item = Gtk.CheckMenuItem(label=f"{int(duration/60)} hour")
+            else:
+                duration_item = Gtk.CheckMenuItem(label=f"{int(duration/(60*24*365))} year")
+
             duration_item.set_name(str(duration))
             if duration == self.window.duration:
                 duration_item.set_active(1)
@@ -218,22 +225,60 @@ class TrayIcon:
 
         refresh_intervals = [0.1, 0.5, 1, 2, 3, 4, 5, 10, 60]
         for refresh_interval in refresh_intervals:
-            if refresh_interval > 1:
+            if refresh_interval < 1:
                 refresh_item = Gtk.CheckMenuItem(label=f"{refresh_interval} seconds")
             else:
                 refresh_item = Gtk.CheckMenuItem(label=f"{refresh_interval} second")
 
             refresh_item.set_name(str(refresh_interval))
             if refresh_interval == self.window.refresh_interval:
-                refresh_item.set_active(3)
+                refresh_item.set_active(1)
             refresh_item.connect("toggled", self.on_refresh_toggled, refresh_interval)
             refresh_submenu.append(refresh_item)
+
+        # Max array size submenu
+        maxarraysize_submenu = Gtk.Menu()
+        maxarraysize_menu = Gtk.MenuItem(label="Max Array size")
+        maxarraysize_menu.set_submenu(maxarraysize_submenu)
+        self.menu.append(maxarraysize_menu)
+
+        maxarraysize_sizes = [1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 0]
+        for maxarraysize_size in maxarraysize_sizes:
+            if maxarraysize_size == 0:
+                maxarraysize_item = Gtk.CheckMenuItem(label="Unlimited")
+            else:
+                maxarraysize_item = Gtk.CheckMenuItem(label=f"{maxarraysize_size*1000} logs")
+
+            maxarraysize_item.set_name(str(maxarraysize_size*1000))
+            if (maxarraysize_size * 1000) == self.window.maxarraysize:
+                maxarraysize_item.set_active(1)
+            maxarraysize_item.connect("toggled", self.on_maxarraysize_toggled, maxarraysize_size * 1000)
+            maxarraysize_submenu.append(maxarraysize_item)
+
+        self.menu.append(Gtk.SeparatorMenuItem())
+
+        array_reset = Gtk.MenuItem(label="Reset array")
+        array_reset.connect("activate", self.on_array_reset)
+        self.menu.append(array_reset)
 
         self.menu.append(Gtk.SeparatorMenuItem())
 
         quit_item = Gtk.MenuItem(label="Quit")
         quit_item.connect("activate", Gtk.main_quit)
         self.menu.append(quit_item)
+
+    def on_array_reset(self, widget):
+        self.window.time_values = []
+        self.window.temperature_values = []
+        self.window.cpu_load_values = []
+        self.window.cpu_process_load_values = []
+        self.window.batt_level_values = []
+        self.window.batt_charging_values = []
+
+    def on_maxarraysize_toggled(self, widget, maxarraysize):
+        if widget.get_active():
+            self.window.maxarraysize = maxarraysize
+            self.uncheck_other_items(widget.get_parent(), maxarraysize)            
 
     def on_duration_toggled(self, widget, duration):
         if widget.get_active():
