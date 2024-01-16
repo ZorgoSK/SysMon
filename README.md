@@ -19,8 +19,10 @@ Right click on tray icon will show the menu with:
   -  Quit ...
 
 All values are stored in arrays.
-To lower the CPU load on long usage (when you keep the app running nonstop) after 10,000 array values app will start 
-to remove the oldest values by 1, so array lenght should remain fullfilled by last 10,000 readings only.
+To lower the CPU load on long usage (when you keep the app running nonstop) ~~after 10,000 array values app will start 
+to remove the oldest values by 1, so array lenght should remain fullfilled by last 10,000 readings only.~~ there is a
+selection of refresh rates from 0.1-60s and selection of max logs (from 1000 to unlimited). I also added possibility to reset
+all arrays.
 
 
 Surely, code will contain lot of programming errors, non-actual functions, etc. I will invite any comments, how to improve it.
