@@ -51,18 +51,20 @@ class CPUPlotWindow(Gtk.Window):
         })
 
         self.fig, ax = plt.subplots(figsize=(8, 6))
+        plt.rcParams["font.family"] = "monospace"
 
-        self.line_temp, = ax.plot([], [], linewidth=1, color='tab:red', label='Temperature (°C)')
-        self.line_load, = ax.plot([], [], linewidth=1, color='tab:blue', label='CPU Load (%)')
-        self.line_battery, = ax.plot([], [], linewidth=1, color='tab:green', label='Battery (%)')
-
+        plt.grid(axis='y', linewidth=0.5, alpha=0.4)
         ax.set_ylim(0, 101)
         ax.yaxis.set_major_locator(plt.MaxNLocator(12))
 
         ax.set_yticklabels([f"{i}" for i in range(0, 101, 10)])
 
-        plt.rcParams["font.family"] = "monospace"
-        plt.grid(axis='y', linewidth=0.5, alpha=0.4)
+
+        self.line_temp, = ax.plot([], [], linewidth=1, color='tab:red', label='Temperature (°C)', alpha=0.7)
+        self.line_load, = ax.plot([], [], linewidth=1, color='tab:blue', label='CPU Load (%)', alpha=0.7)
+        self.line_battery, = ax.plot([], [], linewidth=1, color='tab:green', label='Battery (%)', alpha=0.7)
+
+
 
         vbox = Gtk.VBox(spacing=6)
         self.add(vbox)
